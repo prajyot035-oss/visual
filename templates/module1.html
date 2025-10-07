@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodTunes - Music Recommendation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts - Using Spotify's font Circular -->
+    <link href="https://fonts.googleapis.com/css2?family=Circular:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Spotify Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 90px);
+            position: relative;
+        }
+
+        /* Sidebar/Navigation */
+        .sidebar {
+            width: 240px;
+            background: #000;
+            padding: 24px 12px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        /* Collapsed sidebar state */
+        .sidebar.collapsed {
+            width: 72px;
+            padding: 16px 8px;
+        }
+
+        .sidebar.collapsed .logo {
+            font-size: 1rem;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .logo i { margin-right: 0; }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        /* collapse: hide only the nav text, keep icons centered */
+        .nav-link .nav-text { display: inline-block; margin-left: 8px; }
+        .sidebar.collapsed .nav-text { display: none; }
+
+        .sidebar.collapsed .library-header,
+        .sidebar.collapsed .library-filters,
+        .sidebar.collapsed .library-items { display: none; }
+
+        .sidebar.collapsed .nav-link i { margin-right: 0; }
+
+        /* Content moves left when sidebar collapsed */
+        .content.collapsed {
+            margin-left: 72px;
+            width: calc(100% - 72px);
+        }
+
+        .sidebar-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            gap: 8px;
+        }
+
+        .logo {
+            color: #1DB954;
+            font-size: 1.6rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            margin-bottom: 32px;
+        }
+
+        .sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: #b3b3b3;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+
+        .sidebar-toggle:hover { color: #fff; }
+        .sidebar-toggle i { font-size: 14px; }
+
+        .logo i {
+            margin-right: 12px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-item {
+            margin-bottom: 12px;
+        }
+
+        .nav-link {
+            color: #b3b3b3;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 10px 0;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            border: none;
+            background: none;
+            text-decoration: none;
+        }
+
+        .nav-link .nav-text {
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        .nav-link i {
+            margin-right: 16px;
+            font-size: 20px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .sidebar-library {
+            margin-top: 32px;
+        }
+
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .library-header .d-flex {
+            align-items: center;
+        }
+
+        .library-header i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 8px;
+        }
+
+        .library-filters {
+            margin-bottom: 16px;
+        }
+
+        .filter-pill {
+            background-color: #282828;
+            color: #b3b3b3;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .filter-pill.active {
+            background-color: #1DB954;
+            color: #fff;
+        }
+
+        .library-items {
+            background-color: #181818;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .library-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #282828;
+        }
+
+        .library-item:last-child {
+            border-bottom: none;
+        }
+
+        .library-item i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .library-item h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+        }
+
+        .library-item p {
+            font-size: 12px;
+            color: #b3b3b3;
+            margin: 4px 0 0;
+        }
+
+        .btn-transparent {
+            background: none;
+            border: none;
+            color: #1DB954;
+            font-size: 14px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .btn-transparent:hover {
+            color: #1ed760;
+        }
+
+        /* Main Content Area */
+        .content {
+            margin-left: 240px;
+            padding: 24px;
+            width: calc(100% - 240px);
+            overflow-y: auto;
+        }
+
+        /* Hero/Banner Section */
+        .hero-section {
+            background: linear-gradient(to right bottom, #450af5, #c4efd9);
+            border-radius: 8px;
+            color: #fff;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        .hero-section h1 {
+            font-weight: 700;
+            font-size: 3rem;
+            margin-bottom: 16px;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+        }
+
+        /* Spotify Button Styling */
+        .btn-spotify {
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 500px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.3s ease;
+        }
+
+        .btn-spotify:hover {
+            background-color: #1ed760;
+            transform: scale(1.04);
+            color: white;
+        }
+
+        /* Table Styling - Spotify-like */
+        .table {
+            background-color: #181818;
+            color: #fff;
+            border-radius: 8px;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            margin-top: 24px;
+        }
+
+        .table th {
+            background-color: #282828;
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 12px;
+            border: none;
+        }
+
+        .table td {
+            background-color: transparent;
+            color: #fff;
+            padding: 12px;
+            font-size: 14px;
+            border-bottom: 1px solid #282828;
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transform: translateY(-2px);
+        }
+        
+        .table tbody tr .play-hover {
+            position: absolute;
+            opacity: 0;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #1DB954;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+        }
+        
+        .table tbody tr:hover .play-hover {
+            opacity: 1;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Section Headers - Spotify-like */
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 32px 0 16px;
+            color: #FFFFFF;
+        }
+
+        /* Form Styling - Spotify-like */
+        .form-control {
+            background-color: #333;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 20px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            background-color: #404040;
+            color: white;
+            box-shadow: none;
+        }
+
+        label {
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* Now Playing Bar - Spotify-like */
+        .now-playing-bar {
+            background-color: #181818;
+            border-top: 1px solid #282828;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .now-playing-left {
+            width: 30%;
+            display: flex;
+            align-items: center;
+        }
+
+        .now-playing-cover {
+            width: 56px;
+            height: 56px;
+            background-color: #282828;
+            border-radius: 4px;
+            margin-right: 16px;
+        }
+
+        .now-playing-info {
+            flex-grow: 1;
+        }
+
+        .now-playing-song {
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .now-playing-artist {
+            font-size: 12px;
+            color: #b3b3b3;
+        }
+
+        .now-playing-center {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .playback-controls button {
+            background: none;
+            border: none;
+            color: #b3b3b3;
+            font-size: 14px;
+            padding: 0 8px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .playback-controls button:hover {
+            color: white;
+        }
+
+        .play-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: white;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 16px;
+            transition: transform 0.2s;
+        }
+
+        .play-button:hover {
+            transform: scale(1.06);
+        }
+
+        /* YouTube Search Button - Spotify Style */
+        .youtube-search-btn {
+            background-color: #1DB954;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 500px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* YouTube Button Hover */
+        .youtube-search-btn:hover {
+            background-color: #1ed760;
+            transform: scale(1.04);
+        }
+
+        /* Button Icon */
+        .youtube-search-btn i {
+            margin-right: 8px;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background-color: #535353;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 30%;
+            background-color: #b3b3b3;
+        }
+
+        .progress-bar-container:hover .progress-bar {
+            background-color: #1DB954;
+        }
+
+        /* Song cards */
+        .song-card {
+            background-color: #181818;
+            border-radius: 6px;
+            padding: 16px;
+            transition: background-color 0.3s ease;
+            height: 100%;
+        }
+
+        .song-card:hover {
+            background-color: #282828;
+        }
+
+        .song-card img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .song-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-card p {
+            font-size: 14px;
+            color: #b3b3b3;
+            margin-bottom: 0;
+        }
+        
+        /* Sound Visualization */
+        .sound-waves {
+            display: flex;
+            align-items: center;
+            height: 20px;
+            gap: 3px;
+        }
+        
+        .sound-wave {
+            width: 3px;
+            height: 10px;
+            background-color: #1DB954;
+            border-radius: 1px;
+            animation: sound-wave-animation 0.8s infinite;
+        }
+        
+        .sound-wave:nth-child(1) { animation-delay: 0.1s; }
+        .sound-wave:nth-child(2) { animation-delay: 0.2s; }
+        .sound-wave:nth-child(3) { animation-delay: 0.5s; }
+        .sound-wave:nth-child(4) { animation-delay: 0.3s; }
+        .sound-wave:nth-child(5) { animation-delay: 0.4s; }
+        
+        @keyframes sound-wave-animation {
+            0%, 100% { height: 5px; }
+            50% { height: 15px; }
+        }
+        
+        /* Active song row */
+        .now-playing-row {
+            background-color: rgba(29, 185, 84, 0.2) !important;
+        }
+        
+        .now-playing-row td {
+            border-color: rgba(29, 185, 84, 0.3) !important;
+        }
+        
+        .now-playing-indicator {
+            display: none;
+            align-items: center;
+            margin-right: 10px;
+        }
+        
+        .now-playing-row .now-playing-indicator {
+            display: flex;
+        }
+        
+        /* Now Playing Cover Animation */
+        .now-playing-cover {
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .now-playing-cover::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shine 1.5s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* YouTube Player Styling */
+        #yt-player {
+            border-radius: 8px;
+            overflow: hidden;
+            width: 320px;
+            height: 180px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        #yt-player-container {
+            transition: all 0.3s ease;
+        }
+
+        #yt-player-container.minimized {
+            transform: translateY(-50%) scale(0.7);
+            opacity: 0.8;
+        }
+
+        #yt-player-container:hover.minimized {
+            transform: translateY(-50%) scale(0.8);
+            opacity: 1;
+        }
+
+        #minimize-player {
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+
+        #yt-player-container:hover #minimize-player {
+            opacity: 1;
+        }
+
+        #minimize-player:hover {
+            background-color: rgba(29, 185, 84, 0.8) !important;
+            transform: scale(1.1);
+        }
+
+        /* Sidebar Enhancements */
+        .sidebar-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            color: #1DB954;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-item {
+            margin-bottom: 12px;
+        }
+
+        .nav-link {
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 0;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link i {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #FFFFFF;
+            text-decoration: none;
+            background: none;
+        }
+
+        .sidebar-library {
+            margin-top: 32px;
+        }
+
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .library-header .d-flex {
+            align-items: center;
+        }
+
+        .library-header i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 8px;
+        }
+
+        .library-filters {
+            margin-bottom: 16px;
+        }
+
+        .filter-pill {
+            background-color: #282828;
+            color: #b3b3b3;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .filter-pill.active {
+            background-color: #1DB954;
+            color: #fff;
+        }
+
+        .library-items {
+            background-color: #181818;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .library-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #282828;
+        }
+
+        .library-item:last-child {
+            border-bottom: none;
+        }
+
+        .library-item i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .library-item h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+        }
+
+        .library-item p {
+            font-size: 12px;
+            color: #b3b3b3;
+            margin: 4px 0 0;
+        }
+
+        .btn-transparent {
+            background: none;
+            border: none;
+            color: #1DB954;
+            font-size: 14px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .btn-transparent:hover {
+            color: #1ed760;
+        }
+
+        /* Main Content Area */
+        .content {
+            margin-left: 240px;
+            padding: 24px;
+            width: calc(100% - 240px);
+            overflow-y: auto;
+        }
+
+        /* Hero/Banner Section */
+        .hero-section {
+            background: linear-gradient(to right bottom, #450af5, #c4efd9);
+            border-radius: 8px;
+            color: #fff;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        .hero-section h1 {
+            font-weight: 700;
+            font-size: 3rem;
+            margin-bottom: 16px;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+        }
+
+        /* Spotify Button Styling */
+        .btn-spotify {
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 500px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.3s ease;
+        }
+
+        .btn-spotify:hover {
+            background-color: #1ed760;
+            transform: scale(1.04);
+            color: white;
+        }
+
+        /* Table Styling - Spotify-like */
+        .table {
+            background-color: #181818;
+            color: #fff;
+            border-radius: 8px;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            margin-top: 24px;
+        }
+
+        .table th {
+            background-color: #282828;
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 12px;
+            border: none;
+        }
+
+        .table td {
+            background-color: transparent;
+            color: #fff;
+            padding: 12px;
+            font-size: 14px;
+            border-bottom: 1px solid #282828;
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transform: translateY(-2px);
+        }
+        
+        .table tbody tr .play-hover {
+            position: absolute;
+            opacity: 0;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #1DB954;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+        }
+        
+        .table tbody tr:hover .play-hover {
+            opacity: 1;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Section Headers - Spotify-like */
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 32px 0 16px;
+            color: #FFFFFF;
+        }
+
+        /* Form Styling - Spotify-like */
+        .form-control {
+            background-color: #333;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 20px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            background-color: #404040;
+            color: white;
+            box-shadow: none;
+        }
+
+        label {
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* Now Playing Bar - Spotify-like */
+        .now-playing-bar {
+            background-color: #181818;
+            border-top: 1px solid #282828;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .now-playing-left {
+            width: 30%;
+            display: flex;
+            align-items: center;
+        }
+
+        .now-playing-cover {
+            width: 56px;
+            height: 56px;
+            background-color: #282828;
+            border-radius: 4px;
+            margin-right: 16px;
+        }
+
+        .now-playing-info {
+            flex-grow: 1;
+        }
+
+        .now-playing-song {
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .now-playing-artist {
+            font-size: 12px;
+            color: #b3b3b3;
+        }
+
+        .now-playing-center {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .playback-controls button {
+            background: none;
+            border: none;
+            color: #b3b3b3;
+            font-size: 14px;
+            padding: 0 8px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .playback-controls button:hover {
+            color: white;
+        }
+
+        .play-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: white;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 16px;
+            transition: transform 0.2s;
+        }
+
+        .play-button:hover {
+            transform: scale(1.06);
+        }
+
+        /* YouTube Search Button - Spotify Style */
+        .youtube-search-btn {
+            background-color: #1DB954;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 500px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* YouTube Button Hover */
+        .youtube-search-btn:hover {
+            background-color: #1ed760;
+            transform: scale(1.04);
+        }
+
+        /* Button Icon */
+        .youtube-search-btn i {
+            margin-right: 8px;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background-color: #535353;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 30%;
+            background-color: #b3b3b3;
+        }
+
+        .progress-bar-container:hover .progress-bar {
+            background-color: #1DB954;
+        }
+
+        /* Song cards */
+        .song-card {
+            background-color: #181818;
+            border-radius: 6px;
+            padding: 16px;
+            transition: background-color 0.3s ease;
+            height: 100%;
+        }
+
+        .song-card:hover {
+            background-color: #282828;
+        }
+
+        .song-card img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .song-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-card p {
+            font-size: 14px;
+            color: #b3b3b3;
+            margin-bottom: 0;
+        }
+        
+        /* Sound Visualization */
+        .sound-waves {
+            display: flex;
+            align-items: center;
+            height: 20px;
+            gap: 3px;
+        }
+        
+        .sound-wave {
+            width: 3px;
+            height: 10px;
+            background-color: #1DB954;
+            border-radius: 1px;
+            animation: sound-wave-animation 0.8s infinite;
+        }
+        
+        .sound-wave:nth-child(1) { animation-delay: 0.1s; }
+        .sound-wave:nth-child(2) { animation-delay: 0.2s; }
+        .sound-wave:nth-child(3) { animation-delay: 0.5s; }
+        .sound-wave:nth-child(4) { animation-delay: 0.3s; }
+        .sound-wave:nth-child(5) { animation-delay: 0.4s; }
+        
+        @keyframes sound-wave-animation {
+            0%, 100% { height: 5px; }
+            50% { height: 15px; }
+        }
+        
+        /* Active song row */
+        .now-playing-row {
+            background-color: rgba(29, 185, 84, 0.2) !important;
+        }
+        
+        .now-playing-row td {
+            border-color: rgba(29, 185, 84, 0.3) !important;
+        }
+        
+        .now-playing-indicator {
+            display: none;
+            align-items: center;
+            margin-right: 10px;
+        }
+        
+        .now-playing-row .now-playing-indicator {
+            display: flex;
+        }
+        
+        /* Now Playing Cover Animation */
+        .now-playing-cover {
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .now-playing-cover::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shine 1.5s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* YouTube Player Styling */
+        #yt-player {
+            border-radius: 8px;
+            overflow: hidden;
+            width: 320px;
+            height: 180px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        #yt-player-container {
+            transition: all 0.3s ease;
+        }
+
+        #yt-player-container.minimized {
+            transform: translateY(-50%) scale(0.7);
+            opacity: 0.8;
+        }
+
+        #yt-player-container:hover.minimized {
+            transform: translateY(-50%) scale(0.8);
+            opacity: 1;
+        }
+
+        #minimize-player {
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+
+        #yt-player-container:hover #minimize-player {
+            opacity: 1;
+        }
+
+        #minimize-player:hover {
+            background-color: rgba(29, 185, 84, 0.8) !important;
+            transform: scale(1.1);
+        }
+
+        /* Sidebar Enhancements */
+        .sidebar-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            color: #1DB954;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-item {
+            margin-bottom: 12px;
+        }
+
+        .nav-link {
+            color: #b3b3b3;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 0;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link i {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #FFFFFF;
+            text-decoration: none;
+            background: none;
+        }
+
+        .sidebar-library {
+            margin-top: 32px;
+        }
+
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .library-header .d-flex {
+            align-items: center;
+        }
+
+        .library-header i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 8px;
+        }
+
+        .library-filters {
+            margin-bottom: 16px;
+        }
+
+        .filter-pill {
+            background-color: #282828;
+            color: #b3b3b3;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .filter-pill.active {
+            background-color: #1DB954;
+            color: #fff;
+        }
+
+        .library-items {
+            background-color: #181818;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .library-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #282828;
+        }
+
+        .library-item:last-child {
+            border-bottom: none;
+        }
+
+        .library-item i {
+            color: #1DB954;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .library-item h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+        }
+
+        .library-item p {
+            font-size: 12px;
+            color: #b3b3b3;
+            margin: 4px 0 0;
+        }
+
+        .btn-transparent {
+            background: none;
+            border: none;
+            color: #1DB954;
+            font-size: 14px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .btn-transparent:hover {
+            color: #1ed760;
+        }
+
+        /* Display detected emotion */
+        .detected-emotion {
+            background-color: #282828;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .emotion-badge {
+            background-color: rgba(29, 185, 84, 0.2);
+            border-radius: 20px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .emotion-emoji {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-top">
+                <a href="/" class="logo">
+                    <i class="fas fa-music mr-2"></i>MoodTunes
+                </a>
+                <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                        <i class="fas fa-home"></i><span class="nav-text">Home</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/recommend" class="nav-link {% if request.path == '/recommend' %}active{% endif %}">
+                        <i class="fas fa-search"></i><span class="nav-text">Search</span>
+                    </a>
+                </li>
+            </ul>
+            
+        </nav>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <h1>Discover Your Perfect Soundtrack</h1>
+                <p>Find songs by your favorite artist based on your mood, and get personalized recommendations powered by AI</p>
+            </div>
+
+            <!-- Music Recommendation Form -->
+            <div class="container-fluid p-0">
+                <form method="POST" class="mb-5">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="artist">SELECT ARTIST</label>
+                                <select id="artist" name="artist" class="form-control">
+                                    <option value="">-- Select Artist --</option>
+                                    {% for artist in artists %}
+                                        <option value="{{ artist }}" {% if artist == artist_choice %}selected{% endif %}>{{ artist }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="mood">SELECT MOOD</label>
+                                <select id="mood" name="mood" class="form-control">
+                                    <option value="">-- Select Mood --</option>
+                                    {% for mood in moods %}
+                                        <option value="{{ mood }}" {% if mood == mood_choice %}selected{% endif %}>{{ mood }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn-spotify btn-block">
+                                <i class="fas fa-play"></i> FIND MUSIC
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Display detected emotion -->
+                {% if emotion %}
+                <div class="detected-emotion">
+                    <div class="emotion-badge">
+                        {% if emotion == 'happy' %}
+                        <span class="emotion-emoji">😊</span>
+                        {% elif emotion == 'sad' %}
+                        <span class="emotion-emoji">😢</span>
+                        {% elif emotion == 'angry' %}
+                        <span class="emotion-emoji">😠</span>
+                        {% elif emotion == 'surprised' %}
+                        <span class="emotion-emoji">😲</span>
+                        {% elif emotion == 'fear' %}
+                        <span class="emotion-emoji">😨</span>
+                        {% elif emotion == 'disgust' %}
+                        <span class="emotion-emoji">🤢</span>
+                        {% else %}
+                        <span class="emotion-emoji">😐</span>
+                        {% endif %}
+                        <span>{{ emotion|capitalize }}</span>
+                    </div>
+                    <p>Generating music based on your current mood.</p>
+                </div>
+                {% endif %}
+
+                <!-- Songs by selected artist -->
+                {% if artist_songs_html %}
+                    <div class="d-flex align-items-center">
+                        <h2>Songs by {{ artist_choice }}</h2>
+                        <span class="ml-3 px-3 py-1" style="background-color: rgba(255,255,255,0.1); border-radius: 20px; font-size: 12px; color: #b3b3b3;">
+                            <i class="fas fa-music mr-1"></i> Click to Play
+                        </span>
+                    </div>
+                    <div class="table-responsive">
+                        {{ artist_songs_html|safe }}
+                    </div>
+                    
+                    <!-- YouTube Search Button -->
+                    <div class="mt-4 mb-5">
+                        <button class="youtube-search-btn" onclick="window.open('https://www.youtube.com/results?search_query={{ song }}', '_blank')">
+                            <i class="fab fa-youtube"></i> Play on YouTube
+                        </button>
+                    </div>
+                {% endif %}
+
+                <!-- Recommended songs -->
+                {% if recommended_songs_html %}
+                    <div class="d-flex align-items-center">
+                        <h2>Recommended Songs for Mood: {{ mood_choice }}</h2>
+                        <div class="ml-3 px-3 py-1" style="background: linear-gradient(90deg, #1DB954, #3096f3); border-radius: 20px; font-size: 12px;">
+                            <i class="fas fa-magic mr-1"></i> AI-Powered
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        {{ recommended_songs_html|safe }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Now Playing Bar (Enhanced Spotify-like) -->
+        <div class="now-playing-bar">
+            <div class="now-playing-left">
+                <div class="now-playing-cover">
+                    <div class="sound-waves" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <div class="sound-wave"></div>
+                        <div class="sound-wave"></div>
+                        <div class="sound-wave"></div>
+                        <div class="sound-wave"></div>
+                        <div class="sound-wave"></div>
+                    </div>
+                </div>
+                <div class="now-playing-info">
+                    <div class="now-playing-song">Select a song</div>
+                    <div class="now-playing-artist">Artist name</div>
+                    <div style="display: flex; align-items: center; margin-top: 4px;">
+                        <i class="fas fa-heart" style="color: #1DB954; font-size: 12px; margin-right: 8px;"></i>
+                        <i class="fas fa-ellipsis-h" style="color: #b3b3b3; font-size: 12px;"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- YouTube Player (hidden by default) -->
+            <div id="yt-player-container" style="display:none; position:absolute; right:400px; top:50%; transform:translateY(-50%); z-index:1000; background:#181818; border-radius:10px;">
+                <div style="position: relative;">
+                    <div id="yt-player"></div>
+                    <button id="minimize-player" style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-compress"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="now-playing-center">
+                <div class="playback-controls">
+                    <button title="Shuffle"><i class="fas fa-random"></i></button>
+                    <button title="Previous"><i class="fas fa-step-backward"></i></button>
+                    <button class="play-button" title="Play/Pause"><i class="fas fa-play"></i></button>
+                    <button title="Next"><i class="fas fa-step-forward"></i></button>
+                    <button title="Repeat"><i class="fas fa-redo-alt"></i></button>
+                </div>
+                <div style="display: flex; align-items: center; width: 100%; max-width: 600px;">
+                    <span style="font-size: 12px; color: #b3b3b3; margin-right: 8px;">0:00</span>
+                    <div class="progress-bar-container" style="flex-grow: 1;">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <span style="font-size: 12px; color: #b3b3b3; margin-left: 8px;">3:30</span>
+                </div>
+            </div>
+            <div class="now-playing-right" style="width: 30%; display: flex; justify-content: flex-end; align-items: center;">
+                <button style="background: none; border: none; color: #b3b3b3; margin-right: 16px;" title="Lyrics">
+                    <i class="fas fa-microphone-alt"></i>
+                </button>
+                <button style="background: none; border: none; color: #b3b3b3; margin-right: 16px;" title="Queue">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button style="background: none; border: none; color: #b3b3b3;" title="Devices">
+                    <i class="fas fa-desktop"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- FontAwesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <!-- YouTube IFrame Player API -->
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-player', {
+                height: '180',
+                width: '320',
+                videoId: '{{ youtube_video_id }}',
+                playerVars: {
+                    'playsinline': 1,
+                    'autoplay': 0,
+                    'controls': 1,
+                    'mute': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            // Player ready actions
+        }
+
+        function onPlayerStateChange(event) {
+            // Handle player state changes
+        }
+
+        // Minimize/Restore player
+        document.getElementById('minimize-player').addEventListener('click', function() {
+            var container = document.getElementById('yt-player-container');
+            container.classList.toggle('minimized');
+        });
+    </script>
+    <script>
+        // Sidebar toggle: restore state from localStorage
+        (function() {
+            const sidebar = document.querySelector('.sidebar');
+            const content = document.querySelector('.content');
+            const toggle = document.getElementById('sidebar-toggle');
+
+            function setCollapsed(collapsed) {
+                if (collapsed) {
+                    sidebar.classList.add('collapsed');
+                    if (content) content.classList.add('collapsed');
+                    if (toggle) toggle.innerHTML = '<i class="fas fa-angle-double-right"></i>';
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    if (content) content.classList.remove('collapsed');
+                    if (toggle) toggle.innerHTML = '<i class="fas fa-angle-double-left"></i>';
+                }
+            }
+
+            // Initialize
+            const stored = localStorage.getItem('sidebarCollapsed');
+            setCollapsed(stored === 'true');
+
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    const collapsed = sidebar.classList.contains('collapsed');
+                    setCollapsed(!collapsed);
+                    localStorage.setItem('sidebarCollapsed', String(!collapsed));
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

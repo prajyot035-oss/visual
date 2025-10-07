@@ -1,0 +1,20 @@
+# Requirements for the music generation Flask app
+# Versions: Flask is pinned to the version found in the workspace venv (3.1.2).
+# Note: torch and transformers are large packages with multiple variants (cpu/cuda);
+# pin them explicitly in your deployment environment if needed.
+
+Flask==3.1.2
+numpy
+scipy
+pandas
+scikit-learn
+joblib
+transformers
+torch
+
+# Optional / helpful:
+soundfile
+librosa
+
+# If you use GPU-enabled torch, install the appropriate torch+cuXXX wheel from:
+# https://pytorch.org/get-started/locally/
